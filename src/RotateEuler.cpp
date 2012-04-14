@@ -138,3 +138,33 @@ Mat4d RotateEuler::GetTransform()
   return m;
 }
 
+//----------------------------------------------------------------------
+// Derivative implementation.
+// TODO: NEEDS TO BE VERIFIED
+//
+// cos -sin 0 0
+// sin cos 0 0
+// 0 0 1 0
+// 0 0 0 1
+//
+// Derivative should be:
+// 
+// -sin	-cos 0 0
+// cos	-sin 0 0
+// 0	0	 0 0
+// 0	0	 0 0
+//----------------------------------------------------------------------
+Mat4d RotateEuler::GetDeriv(int dof)
+{
+	Mat4d matrix = vl_zero;
+
+	double sine = sin(mAngle);
+	double cosine = cos(mAngle);
+
+	matrix[0][0] = -sine;
+	matrix[0][1] = -cosine;
+	matrix[1][0] = cosine;
+	matrix[1][1] = -sine;
+
+	return matrix;
+}

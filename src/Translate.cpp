@@ -80,3 +80,24 @@ Mat4d Translate::GetTransform()
   
   return m;
 }
+
+//----------------------------------------------------------------------
+// Derivative implementation.
+// TODO: NEEDS TO BE VERIFIED
+//
+// 1 0 0 x
+// 0 1 0 y
+// 0 0 1 z
+// 0 0 0 1
+//
+// Derivative should be zero matrix where dof taking derivative
+// of is 1
+//----------------------------------------------------------------------
+Mat4d Translate::GetDeriv(int dof)
+{
+	Mat4d matrix = vl_zero;
+
+	matrix[dof][3] = 1;
+
+	return matrix;
+}

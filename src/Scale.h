@@ -72,6 +72,8 @@ class Scale : public Transform
     return mBone;
   }
 
+  virtual Mat4d GetDeriv(int dof);
+
  private:
   void MakeDofs( char* name, DofList& dofs, double low_range_scalar, double high_range_scalar );
   void ZeroDofs() { mDofs[0] = 0; mDofs[1] = 0; mDofs[2] = 0; }

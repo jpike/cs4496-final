@@ -56,6 +56,8 @@ class Translate : public Transform
   void Set( int index, double value ) { mOffset[index] = value; }
   void Set( const Vec3d& offset ) { mOffset = offset; }
 
+  virtual Mat4d GetDeriv(int dof);
+
  private:
   void ZeroDofs() { mDofs[0] = 0; mDofs[1] = 0; mDofs[2] = 0; }
   void MakeDofs( char* name, DofList& dofs, Vec3d range);

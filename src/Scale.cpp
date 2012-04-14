@@ -70,3 +70,24 @@ Mat4d Scale::GetTransform()
   m[3][3] = 1;
   return m;
 }
+
+//----------------------------------------------------------------------
+// Derivative implementation.
+// TODO: NEEDS TO BE VERIFIED
+//
+// x 0 0 0
+// 0 y 0 0
+// 0 0 z 0
+// 0 0 0 1
+//
+// Derivative should be zero matrix where dof taking derivative
+// of is 1
+//----------------------------------------------------------------------
+Mat4d Scale::GetDeriv(int dof)
+{
+	Mat4d matrix = vl_zero;
+
+	matrix[dof][dof] = 1;
+
+	return matrix;
+}

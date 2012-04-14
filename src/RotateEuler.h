@@ -46,6 +46,8 @@ class RotateEuler : public Transform
 
   virtual Mat4d GetTransform();
 
+  Mat4d GetDeriv(int dof);
+
   // from Transform
   virtual void Apply();
   virtual bool IsDof() { return (mDof!=0); }
