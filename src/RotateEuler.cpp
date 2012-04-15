@@ -161,10 +161,27 @@ Mat4d RotateEuler::GetDeriv(int dof)
 	double sine = sin(mAngle);
 	double cosine = cos(mAngle);
 
-	matrix[0][0] = -sine;
-	matrix[0][1] = -cosine;
-	matrix[1][0] = cosine;
-	matrix[1][1] = -sine;
+	if (mAxis[0])
+	{
+		matrix[1][1] = -sine;
+		matrix[1][2] = -cosine;
+		matrix[2][1] = cosine;
+		matrix[2][2] = -sine;
+	}
+	else if (mAxis[1])
+	{
+		matrix[0][0] = -sine;
+		matrix[0][2] = cosine;
+		matrix[2][0] = -cosine;
+		matrix[2][2] = -sine;
+	}
+	else if (mAxis[2])
+	{
+		matrix[0][0] = -sine;
+		matrix[0][1] = -cosine;
+		matrix[1][0] = cosine;
+		matrix[1][1] = -sine;
+	}
 
 	return matrix;
 }
