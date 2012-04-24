@@ -19,8 +19,12 @@ void Solution(void*);
 //----------------------------------------------------------------------
 namespace IK_Solver
 {
-	double EvaluateObjectiveFunction(int frameNum);
+	double EvaluateObjectiveFunction(int frameNum, Matd & constraintVector);
 	Vec3d EvaluateConstraint(Marker * handle, Vec3d & constraintPos);
+
+	void CreateConstraintVector(int frameNum, Matd & constraintVector);
+
+	void CreateJacobian(int frameNum);
 }
 
 #endif
