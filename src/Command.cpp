@@ -27,14 +27,20 @@
 #endif	//__TRANSFORM_H__
 
 #include "Logger.h"
+#include "Command.h"
+#include "IKSolver.h"
 
 #include <cfloat>
 
 //----------------------------------------------------------------------
 // Typedefs
 //----------------------------------------------------------------------
-typedef std::vector<Marker*> MarkerList;
+//typedef std::vector<Marker*> MarkerList;
 
+//----------------------------------------------------------------------
+// Static Variables
+//----------------------------------------------------------------------
+//DofIdToMarkerMap IK_Solver::dofIdToMarkerMap;
 
 int readSkelFile( FILE* file, ArticulatedBody* skel );
 
@@ -72,6 +78,69 @@ void LoadModel(void *v)
   cout << "number of dofs in model: " << UI->mData->mModels[0]->GetDofCount() << endl;
 }
 
+void NavigateModel(Model * selectedModel)
+{
+	std::ofstream modelFile("logs/model.txt");
+
+	modelFile << "Dofs" << std::endl;
+	std::vector<Dof *> dofList = selectedModel->mDofList.mDofs;
+	for (int i = 0; i < dofList.size(); i++)
+	{
+		Dof * dof = dofList[i];
+		modelFile << i << "\t" << dof << "\t" << dof->mId << "\t" << dof->GetName() << "\t" << dof->ReturnType() << "\t" 
+					<< dof->GetTransformValue() << "\t" << dof->mVal << "\t" << dof->mLowerBound << "\t" << dof->mUpperBound << std::endl;
+	}
+
+	modelFile << "Handles" << std::endl;
+	std::vector<Marker *> handleList = selectedModel->mHandleList;
+	for (int i = 0; i < handleList.size(); i++)
+	{
+		Marker * marker = handleList[i];
+		modelFile << i << "\t" << marker << "\t" << marker->mIndex << "\t" << marker->mMarkerOrder << "\t" << marker->mName << "\t" 
+					<< marker->mNodeIndex << "\t" << marker->mOffset << "\t" << marker->mGlobalPos << std::endl;
+	}
+
+	modelFile << "Limbs" << std::endl;
+	std::vector<TransformNode *> limbList = selectedModel->mLimbs;
+	for (int i = 0; i < limbList.size(); i++)
+	{
+		TransformNode * node = limbList[i];
+
+		modelFile << "Limb" << std::endl;
+		modelFile << i << "\t" << node << "\t" << node->mIndex << "\t" << node->mName << std::endl;
+
+		modelFile << "Node Handles" << std::endl;
+		std::vector<Marker *> nodeHandles = node->mHandles;
+		for (int j = 0; j < nodeHandles.size(); j++)
+		{
+			modelFile << j << "\t" << nodeHandles[i] << std::endl;
+		}
+
+		modelFile << "Node Transforms" << std::endl;
+		std::vector<Transform *> transforms = node->mTransforms;
+		for (int j = 0; j < transforms.size(); j++)
+		{
+			Transform * transform = transforms[j];
+			modelFile << "Transform" << std::endl;
+			modelFile << j << "\t" << transform << "\t" << transform->mIndex << "\t" << transform->GetIndex() << "\t" 
+						<< transform->IsDof() << "\t" << transform->GetDofCount() << std::endl;
+
+			if (!transform->IsDof())
+				continue;
+
+			modelFile << "Transform Dofs " << j << std::endl;
+			for (int k = 0; k < transform->GetDofCount(); k++)
+			{
+				Dof * dof = transform->GetDof(k);
+				modelFile << k << "\t" << dof << "\t" << dof->mId << "\t" << dof->GetName() << "\t" << dof->ReturnType() << "\t" 
+					<< dof->GetTransformValue() << "\t" << dof->mVal << "\t" << dof->mLowerBound << "\t" << dof->mUpperBound << std::endl;
+			}
+		}
+	}
+
+	modelFile.close();
+}
+
 void Solution(void *v)
 {
     cout << "TODO: Solve inverse kinematics problem" << endl;
@@ -80,6 +149,20 @@ void Solution(void *v)
 	const double EPSILON = 0.01;
 	const int NUM_ITERATIONS = 1;
 
+	IKSolver solver(EPSILON, NUM_ITERATIONS, UI->mData->mSelectedModel);
+	solver.Initialize();
+
+	solver.SolveLoop();
+
+	// NOTE: MOST STUFF BELOW IS MOSTLY OBSOLETE
+	// Main stuff has been refactored to IKSolver class, which should
+	// be more maintainable then the mess of code used in initial approach
+
+	/*
+
+	Model * selectedModel = UI->mData->mSelectedModel;
+	NavigateModel(selectedModel);
+
 	int numFrames = UI->mData->mSelectedModel->mOpenedC3dFile->GetFrameCount();
 	int frameCounter = 0;
 
@@ -87,17 +170,25 @@ void Solution(void *v)
 	
 	double objectiveFunction = DBL_MAX;	
 
+	std::vector<Mat4d> derivatives;
+
 	// max iteration controlled version of loop
 	for (frameCounter = 0; (frameCounter < NUM_ITERATIONS && objectiveFunction > EPSILON && frameCounter < numFrames); frameCounter++)
 	{
+		// Print DOFs
+		IK_Solver::PrintDofs(frameCounter);
+
 		// compute matrix of contraint vectors (1 xyz vector per row)
 		IK_Solver::CreateConstraintVector(frameCounter, constraintVector);
 		// compute objective function value using constraints
 		objectiveFunction = IK_Solver::EvaluateObjectiveFunction(frameCounter, constraintVector);
+
+		// compute derivatives for each transform matrix
+		IK_Solver::CreateMatrixDerivatives(derivatives);
 		
-		// jacobian computation
-		IK_Solver::CreateJacobian(frameCounter);
-	}
+		// jacobian computation - commented out for now since doesn't work (not complete yet)
+		//IK_Solver::CreateJacobian(frameCounter);
+	}*/
 
 	/* NOTE: Probably don't want to uncomment this section below until
 	it is fully implemented due to possibility of infinite while loop 
@@ -156,7 +247,7 @@ void LoadC3d(void *v)
 double IK_Solver::EvaluateObjectiveFunction(int frameNum, Matd & constraintVector)
 {
 #ifdef _DEBUG
-	Logger::OpenLogFile("objective.txt");
+	Logger::OpenLogFile("logs/objective.txt");
 
 	Logger::Print("Frame Num: ");
 	Logger::PrintLine(frameNum);
@@ -201,7 +292,7 @@ double IK_Solver::EvaluateObjectiveFunction(int frameNum, Matd & constraintVecto
 	Logger::Print("\nFinal Constraint Value: ");
 	Logger::PrintLine(value);
 
-	Logger::CloseLogFile("objective.txt");
+	Logger::CloseLogFile("logs/objective.txt");
 #endif
 
 	return value;
@@ -227,7 +318,7 @@ Vec3d IK_Solver::EvaluateConstraint(Marker * handle, Vec3d & constraintPos)
 void IK_Solver::CreateConstraintVector(int frameNum, Matd & constraintVector)
 {
 #ifdef _DEBUG
-	Logger::OpenLogFile("constraint.txt");
+	Logger::OpenLogFile("logs/constraint.txt");
 
 	Logger::Print("Frame Num: ");
 	Logger::PrintLine(frameNum);
@@ -285,7 +376,7 @@ void IK_Solver::CreateConstraintVector(int frameNum, Matd & constraintVector)
 	}
 
 #ifdef _DEBUG
-	Logger::CloseLogFile("constraint.txt");
+	Logger::CloseLogFile("logs/constraint.txt");
 #endif
 
 }
@@ -299,11 +390,13 @@ void IK_Solver::CreateConstraintVector(int frameNum, Matd & constraintVector)
 void IK_Solver::CreateJacobian(int frameNum)
 {
 #ifdef _DEBUG
-	Logger::OpenLogFile("jacobian.txt");
+	Logger::OpenLogFile("logs/jacobian.txt");
 
 	Logger::Print("Frame Num: ");
 	Logger::PrintLine(frameNum);
 #endif
+
+	std::map<int, Vec3d> jacobians;
 
 	// we need to compute derivatives for each handle
 	MarkerList & modelHandles = UI->mData->mSelectedModel->mHandleList;
@@ -322,17 +415,17 @@ void IK_Solver::CreateJacobian(int frameNum)
 
 		// get important related values (handle, parent, etc.)
 		Marker * handle = modelHandles[i];
+		Vec4d localPos(handle->mOffset, 1.0);
 		TransformNode * node = UI->mData->mSelectedModel->mLimbs[handle->mNodeIndex];
 		Mat4d parentTransform = node->mParentTransform;
 
 #ifdef _DEBUG
-		Logger::Print("\tParent Transform: ");
+		Logger::PrintLine("\tParent Transform: ");
 		Logger::PrintLine(parentTransform);
 #endif
 
 		// loop over all transforms for current node
 		// create base transform (identity) as we go through transforms in this node
-		Mat4d base = vl_I;	
 		for (int j = 0; j < node->mTransforms.size(); j++)
 		{
 			Transform * transform = node->mTransforms[j];
@@ -342,38 +435,157 @@ void IK_Solver::CreateJacobian(int frameNum)
 				// loop over all degress of freedom
 				for (int k = 0; k < transform->GetDofCount(); k++)
 				{
+					// calculate derivative
 					Mat4d deriv = transform->GetDeriv(k);
-					base = base * deriv;
-
+					// get index into dof list
+					int dofIndex = transform->GetDof(k)->mId;
+					std::cout << dofIndex << "\t" << transform->GetDof(k)->GetTransformValue() << std::endl;
+					// get matrix before this derivative
+					Mat4d preMatrix = vl_I;
+					for (int m = 0; m < j; m++)
+					{
+						preMatrix = preMatrix * node->mTransforms[m]->GetTransform();
+					}
+					// get matrix after this derivative
+					Mat4d postMatrix = vl_I;
+					for (int n = j+1; n < node->mTransforms.size(); n++)
+					{
+						postMatrix = postMatrix * node->mTransforms[n]->GetTransform();
+					}
+					// compose final value
+					Mat4d finalMatrix = parentTransform * preMatrix * deriv * postMatrix;
+					Vec4d jacobianValue = finalMatrix * localPos;
 #ifdef _DEBUG
-					Logger::Print("\tDofDeriv: ");
-					Logger::Print(deriv);
-					Logger::Print("\tBase: ");
-					Logger::PrintLine(base);
+					Logger::Print("Dof: ");
+					Logger::Print(dofIndex);
+					Logger::Print("\tJacobianValue: ");
+					Logger::PrintLine(jacobianValue);
 #endif
 				}
 			}
-			// non-DOF case - need to add regular transform
+
+		}
+
+
+	}
+
+#ifdef _DEBUG
+	Logger::CloseLogFile("logs/jacobian.txt");
+#endif
+}
+
+//----------------------------------------------------------------------
+// Computes derivatives of each matrix
+//----------------------------------------------------------------------
+void IK_Solver::CreateMatrixDerivatives(std::vector<Mat4d> & derivatives)
+{
+#ifdef _DEBUG
+	Logger::OpenLogFile("logs/derivatives.txt");
+#endif
+
+	// clear derivatives from past evaluation
+	derivatives.clear();
+
+	// we need to compute derivatives for each handle
+	MarkerList & modelHandles = UI->mData->mSelectedModel->mHandleList;
+
+#ifdef _DEBUG
+	Logger::Print("Number of Handles: ");
+	Logger::PrintLine(modelHandles.size());
+#endif
+
+	// loop over all handles, computing derivatives
+	for (int i = 0; i < modelHandles.size(); i++)
+	{
+		// get handle and node
+		Marker * handle = modelHandles[i];
+		TransformNode * node = UI->mData->mSelectedModel->mLimbs[handle->mNodeIndex];
+
+#ifdef _DEBUG
+		Logger::Print("\nHandle Num: ");
+		Logger::PrintLine(i);
+#endif
+
+		std::cout << "Handle Num: " << i << std::endl;
+
+		// loop over all transforms
+		for (int j = 0; j < node->mTransforms.size(); j++)
+		{
+			Transform * transform = node->mTransforms[j];
+
+			std::cout << "Transform: " << transform->GetIndex() << " " << j << std::endl;
+
+#ifdef _DEBUG
+			Logger::PrintLine("\nOriginal Transform: ");
+			Logger::PrintLine(transform->GetTransform());
+#endif
+
+			// dof case - compute derivative
+			if (transform->IsDof())
+			{
+				// loop over all dofs
+				for (int k = 0; k < transform->GetDofCount(); k++)
+				{
+					Dof * dof = transform->GetDof(k);
+					//std::cout << "DofID: " << dof->mId << "DofValue: " << dof->mVal << "DofType: " << dof->ReturnType() << std::endl;
+
+					Mat4d deriv = transform->GetDeriv(k);
+					derivatives.push_back(deriv);
+
+#ifdef _DEBUG
+					Logger::Print("\nDofDeriv: ");
+					Logger::PrintLine(k);
+					Logger::PrintLine(deriv);
+#endif
+				}
+			}
+			// non-dof case - "derivative" should be all zeroes
 			else
 			{
-				Mat4d mat = transform->GetTransform();
-				base = base * mat;
+				Mat4d deriv = vl_zero;
+				derivatives.push_back(deriv);
 #ifdef _DEBUG
-					Logger::Print("\tNonDofMat: ");
-					Logger::Print(mat);
-					Logger::Print("\tBase: ");
-					Logger::PrintLine(base);
+				Logger::PrintLine("\nNonDofDeriv: ");
+				Logger::PrintLine(deriv);
 #endif
 			}
 		}
+	}
 
 #ifdef _DEBUG
-		Logger::Print("Final Base: ");
-		Logger::PrintLine(base);
+	Logger::CloseLogFile("logs/derivatives.txt");
+#endif
+}
+
+//----------------------------------------------------------------------
+// Prints DOFs to file
+//----------------------------------------------------------------------
+void IK_Solver::PrintDofs(int frameNum)
+{
+#ifdef _DEBUG
+	Logger::OpenLogFile("logs/dofs.txt");
+
+	Logger::Print("Frame Num: ");
+	Logger::PrintLine(frameNum);
+#endif
+
+	// get DOF list
+	int dofCount = UI->mData->mSelectedModel->GetDofCount();
+	DofList dofList = UI->mData->mSelectedModel->mDofList;
+
+	// loop over and print
+	for (int i = 0; i < dofCount; i++)
+	{
+		double dof = dofList.GetDof(i);
+#ifdef _DEBUG
+		Logger::Print("Dof ");
+		Logger::Print(i);
+		Logger::Print(": \t");
+		Logger::PrintLine(dof);
 #endif
 	}
 
 #ifdef _DEBUG
-	Logger::CloseLogFile("jacobian.txt");
+	Logger::CloseLogFile("logs/dofs.txt");
 #endif
 }

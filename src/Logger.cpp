@@ -4,6 +4,8 @@
 
 #include "Logger.h"
 
+// OBSOLETE - Not really needed in grand scheme of things
+
 //----------------------------------------------------------------------
 // Static variables
 //----------------------------------------------------------------------
@@ -100,6 +102,14 @@ void Logger::Print(Mat4d & mat)
 }
 
 //----------------------------------------------------------------------
+// Print Vec4d to log file
+//----------------------------------------------------------------------
+void Logger::Print(Vec4d & vec)
+{
+	(*currentFile) << vec;
+}
+
+//----------------------------------------------------------------------
 // Print text and newline to file
 //----------------------------------------------------------------------
 void Logger::PrintLine(std::string text)
@@ -153,4 +163,12 @@ void Logger::PrintLine(double num)
 void Logger::PrintLine(Mat4d & mat)
 {
 	(*currentFile) << mat << std::endl;
+}
+
+//----------------------------------------------------------------------
+// Print Vec4d and newline to log file
+//----------------------------------------------------------------------
+void Logger::PrintLine(Vec4d & vec)
+{
+	(*currentFile) << vec << std::endl;
 }

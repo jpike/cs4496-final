@@ -4,6 +4,7 @@
 #include <fstream>
 #include "vl/VLd.h"
 #include <vector>
+#include <map>
 #include "Marker.h"
 
 typedef void (*Command)(void*);
@@ -14,18 +15,32 @@ void Exit(void*);
 void Solution(void*);
 
 //----------------------------------------------------------------------
-// Namespace to hold some stuff related to IK solver
+// Typedefs
+//----------------------------------------------------------------------
+//typedef std::map<int, Marker *> DofIdToMarkerMap;
+
+//----------------------------------------------------------------------
+// Class to hold some stuff related to IK solver
 // Might refactor to other class, etc. later
 //----------------------------------------------------------------------
-namespace IK_Solver
+class IK_Solver
 {
-	double EvaluateObjectiveFunction(int frameNum, Matd & constraintVector);
-	Vec3d EvaluateConstraint(Marker * handle, Vec3d & constraintPos);
+public:
+	// Functions
+	static double EvaluateObjectiveFunction(int frameNum, Matd & constraintVector);
+	static Vec3d EvaluateConstraint(Marker * handle, Vec3d & constraintPos);
 
-	void CreateConstraintVector(int frameNum, Matd & constraintVector);
+	static void CreateConstraintVector(int frameNum, Matd & constraintVector);
 
-	void CreateJacobian(int frameNum);
-}
+	static void CreateJacobian(int frameNum);
+
+	static void CreateMatrixDerivatives(std::vector<Mat4d> & derivatives);
+	
+	static void PrintDofs(int frameNum);
+
+	// Variables
+	//static DofIdToMarkerMap dofIdToMarkerMap;
+};
 
 #endif
 

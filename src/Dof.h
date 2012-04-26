@@ -25,9 +25,9 @@ class Dof
         
 
   virtual double GetTransformValue(){
-    return 0.0;
+    return mVal;
   }
-  virtual void SetTransformValue(double value){};
+  virtual void SetTransformValue(double value){ mVal = value; };
   
   virtual int ReturnType(){
     return -1;
