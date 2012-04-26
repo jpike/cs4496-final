@@ -10,6 +10,7 @@
 ///-------------------------------------------------------------
 #include "IKSolver.h"
 #include <fstream>
+#include <cfloat>
 #include "Marker.h"
 #include "TransformNode.h"
 #include "Transform.h"
@@ -19,8 +20,8 @@
 /// Constructor.
 /// Sets parameters for solver.
 ///-------------------------------------------------------------
-IKSolver::IKSolver(double epsilon, int maxIterations, Model * model)
-	: mEpsilon(epsilon), mMaxIterations(maxIterations), mModel(model)
+IKSolver::IKSolver(double epsilon, double stepSize, int maxIterations, Model * model)
+	: mEpsilon(epsilon), mStepSize(stepSize), mMaxIterations(maxIterations), mModel(model)
 {
 	
 }
@@ -41,7 +42,7 @@ IKSolver::~IKSolver()
 ///-------------------------------------------------------------
 void IKSolver::Initialize()
 {
-	CreateDofToHandleMap();
+	CreateConstraints();
 }
 
 ///-------------------------------------------------------------
@@ -145,15 +146,123 @@ void IKSolver::SolveLoop()
 	// limited by a max iteration parameter set for the solver
 	for (int frameCounter = 0; frameCounter < maxFrames && frameCounter < mMaxIterations; frameCounter++)
 	{
-		// Compute C
-		CreateConstraintMap(frameCounter);
-		CreateConstraintMatrix();
+		// TODO: Evaluate objective function
+		double objectiveFunction = DBL_MAX;
 
-		// Compute J
-		CreatePreMatrices();
-		CreatePostMatrices();
-		CreateDerivatives();
+		while (objectiveFunction > mEpsilon)
+		{
+			// calculate constraint values
+			CalculateConstraints(frameCounter);
+
+			// calculate gradient
+			Vecd gradient = CalculateGradient(frameCounter);
+
+			// get old dofs
+			Vecd oldDofs;
+			oldDofs.SetSize(mModel->GetDofCount());
+			mModel->mDofList.GetDofs(&oldDofs);
+
+			// move dofs
+			Vecd newDofs = oldDofs - mStepSize * gradient;
+
+			// update dofs
+			mModel->SetDofs(newDofs);
+
+			// calculate new objective function value
+			objectiveFunction = EvaluateObjectiveFunction(frameCounter);
+		}
+
 	}
+}
+
+///-------------------------------------------------------------
+/// Creates initial list of constraints.
+///-------------------------------------------------------------
+void IKSolver::CreateConstraints()
+{
+	// clear any old data that might exist
+	mConstraintList.clear();
+
+	// get all handles on model
+	MarkerList & modelHandles = mModel->mHandleList;
+
+	// loop over all handles on model, evaluating constraint
+	for (int i = 0; i < modelHandles.size(); i++)
+	{
+		// get handle on model and contraint position
+		Marker * handle = modelHandles[i];
+		Vec3d & constraintPos = mModel->mOpenedC3dFile->GetMarkerPos(0, i);
+
+		// if constraint is 0, 0, 0, then we don't have a constraint to actually deal with,
+		// so only create and add constraint if this is not the case
+		if (constraintPos != vl_zero)
+		{
+			mConstraintList.push_back(Constraint(mModel, i));
+		}
+	}
+
+#ifdef _DEBUG
+	LogConstraintList(-1);
+#endif
+}
+
+///-------------------------------------------------------------
+/// Calculates constraints for a given frame.
+///-------------------------------------------------------------
+void IKSolver::CalculateConstraints(int frameNum)
+{
+	// loop over all constraints, updating values
+	for (int i = 0; i < mConstraintList.size(); i++)
+	{
+		Constraint & constraint = mConstraintList[i];
+		constraint.EvaluateConstraint(frameNum);
+	}
+
+#ifdef _DEBUG
+	LogConstraintList(frameNum);
+#endif
+}
+
+///-------------------------------------------------------------
+/// Logs constraint list.
+///-------------------------------------------------------------
+void IKSolver::LogConstraintList(int frameNum)
+{
+	std::ofstream logFile("logs/constraints.txt");
+
+	logFile << "Frame: " << frameNum << std::endl;
+	// loop and print data
+	for (int i = 0; i < mConstraintList.size(); i++)
+	{
+		// get data
+		Constraint & constraint = mConstraintList[i];
+
+		// log data
+		logFile << "Constraint " << i << "\tId: " << constraint.GetConstraintId() 
+				<< "\tValue: " << constraint.GetConstraintValue()
+				<< "\tSqrLen: " << constraint.GetConstraintSquareLength()
+				<< std::endl;
+	}
+
+	logFile.close();
+}
+
+///-------------------------------------------------------------
+/// Calculates gradient for a given frame.
+/// TODO
+///-------------------------------------------------------------
+Vecd IKSolver::CalculateGradient(int frameNum)
+{
+	return vl_zero;
+}
+
+///-------------------------------------------------------------
+/// Evaluates objective function for a given frame.
+/// TODO
+///-------------------------------------------------------------
+double IKSolver::EvaluateObjectiveFunction(int frameNum)
+{
+	return 0.0;
 }
 
 ///-------------------------------------------------------------

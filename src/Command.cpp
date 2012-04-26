@@ -147,9 +147,10 @@ void Solution(void *v)
     bool test = UI->mData->mSelectedModel->mLimbs[0]->mTransforms[0]->IsDof();
 
 	const double EPSILON = 0.01;
+	const double STEP_SIZE = 0.01;
 	const int NUM_ITERATIONS = 1;
 
-	IKSolver solver(EPSILON, NUM_ITERATIONS, UI->mData->mSelectedModel);
+	IKSolver solver(EPSILON, STEP_SIZE, NUM_ITERATIONS, UI->mData->mSelectedModel);
 	solver.Initialize();
 
 	solver.SolveLoop();

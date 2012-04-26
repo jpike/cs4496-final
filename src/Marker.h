@@ -5,6 +5,8 @@
 #include "GLPrimitives.h"
 #endif	//__GLPRIMITIVES_H__
 
+#include <vector>
+
 class Marker : public Sphere
 {
  public:
@@ -21,5 +23,10 @@ class Marker : public Sphere
   int mMarkerOrder; // this marker can be accessed by mSelectedModel->mHandleList[mMarkerOrder]
   Vec3d mGlobalPos; // the world coordinates of this marker; updated by SetDofs()
 };
+
+///-------------------------------------------------------------
+/// Typedefs
+///-------------------------------------------------------------
+typedef std::vector<Marker*> MarkerList;
 
 #endif

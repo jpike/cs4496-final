@@ -12,7 +12,9 @@
 /// Includes
 ///-------------------------------------------------------------
 #include <map>
+#include <vector>
 #include "Model.h"
+#include "Constraint.h"
 
 ///-------------------------------------------------------------
 /// Typedefs
@@ -20,9 +22,9 @@
 typedef std::map<int, Marker *> DofIdToMarkerMap;
 typedef std::multimap<Marker *, int> MarkerToDofIdMap;
 typedef std::map<Marker *, Vec4d> MarkerToPosMap;
-typedef std::vector<Marker*> MarkerList;
 typedef std::map<int, Mat4d> DofIdToMatrixMap;
 typedef std::map<int, Vec4d> DofIdToVectorMap;
+typedef std::vector<Constraint> ConstraintList;
 
 ///-------------------------------------------------------------
 /// @IKSolver
@@ -32,7 +34,7 @@ typedef std::map<int, Vec4d> DofIdToVectorMap;
 class IKSolver
 {
 public:
-	IKSolver(double epsilon, int maxIterations, Model * model);
+	IKSolver(double epsilon, double stepSize, int maxIterations, Model * model);
 	~IKSolver();
 
 	void Initialize();
@@ -41,10 +43,18 @@ public:
 protected:
 
 	// initialization helper functions
+	void CreateConstraints();
+	void LogConstraintList(int frameNum);
+
 	void CreateDofToHandleMap();
 	void LogDofToHandleMap();
+	
 
 	// loop-solving helper functions
+	void CalculateConstraints(int frameNum);
+	double EvaluateObjectiveFunction(int frameNum);
+	Vecd CalculateGradient(int frameNum);
+
 	void CreateConstraintMap(int frameNum);
 	void LogConstraintMap();
 	Vec3d EvaluateConstraint(Marker * handle, Vec3d & constraintPos);
@@ -59,8 +69,12 @@ protected:
 
 	// parameters for an individual "solving"
 	double mEpsilon;
+	double mStepSize;
 	int mMaxIterations;
 	Model * mModel;
+
+	// data needed for computation
+	ConstraintList mConstraintList;
 
 	// maps for easier access to certain data
 	DofIdToMarkerMap mDofToHandleMap;
