@@ -148,7 +148,7 @@ void Solution(void *v)
 
 	const double EPSILON = 0.01;
 	const double STEP_SIZE = 0.01;
-	const int NUM_ITERATIONS = 1;
+	const int NUM_ITERATIONS = 2;
 
 	IKSolver solver(EPSILON, STEP_SIZE, NUM_ITERATIONS, UI->mData->mSelectedModel);
 	solver.Initialize();

@@ -15,6 +15,7 @@
 #include "TransformNode.h"
 #include "Transform.h"
 #include "C3dFileInfo.h"
+#include "ConstraintJacobian.h"
 
 ///-------------------------------------------------------------
 /// Constructor.
@@ -141,18 +142,32 @@ void IKSolver::SolveLoop()
 {
 	int maxFrames = mModel->mOpenedC3dFile->GetFrameCount();
 
+#ifdef _DEBUG
+	std::ofstream logFile("logs/loop_log.txt");
+
+	logFile << "Num Frames: " << maxFrames << std::endl << std::endl;
+#endif
+
 	// loop over all valid frames
 	// this is limited by the number of frames in the constraint file, but it is also
 	// limited by a max iteration parameter set for the solver
-	for (int frameCounter = 0; frameCounter < maxFrames && frameCounter < mMaxIterations; frameCounter++)
+	for (int frameCounter = 0; frameCounter < maxFrames; frameCounter++)
 	{
-		// TODO: Evaluate objective function
-		double objectiveFunction = DBL_MAX;
+		// calculate constraint values
+		CalculateConstraints(frameCounter);
+		// evaluate objective function
+		double objectiveFunction = EvaluateObjectiveFunction(frameCounter);
 
-		while (objectiveFunction > mEpsilon)
+		int iterations = 0;
+
+		while (objectiveFunction > mEpsilon && iterations < mMaxIterations)
 		{
-			// calculate constraint values
-			CalculateConstraints(frameCounter);
+			
+#ifdef _DEBUG
+			logFile << "Frame: " << frameCounter << std::endl;
+			logFile << "Iteration: " << iterations << std::endl;
+			logFile << "Objective Function: " << objectiveFunction << std::endl;
+#endif
 
 			// calculate gradient
 			Vecd gradient = CalculateGradient(frameCounter);
@@ -168,11 +183,27 @@ void IKSolver::SolveLoop()
 			// update dofs
 			mModel->SetDofs(newDofs);
 
+#ifdef _DEBUG
+			logFile << "Gradient: " << gradient << std::endl;
+			logFile << "Old Dofs: " << oldDofs << std::endl;
+			logFile << "New Dofs: " << newDofs << std::endl;
+			logFile << std::endl;
+#endif
+
+			// calculate new constraint values
+			CalculateConstraints(frameCounter);
 			// calculate new objective function value
 			objectiveFunction = EvaluateObjectiveFunction(frameCounter);
+
+			// update iteration counter
+			iterations++;
 		}
 
 	}
+
+#ifdef _DEBUG
+	logFile.close();
+#endif
 }
 
 ///-------------------------------------------------------------
@@ -202,7 +233,7 @@ void IKSolver::CreateConstraints()
 	}
 
 #ifdef _DEBUG
-	LogConstraintList(-1);
+	LogConstraintList(0, false);
 #endif
 }
 
@@ -219,18 +250,24 @@ void IKSolver::CalculateConstraints(int frameNum)
 	}
 
 #ifdef _DEBUG
-	LogConstraintList(frameNum);
+	LogConstraintList(frameNum, true);
 #endif
 }
 
 ///-------------------------------------------------------------
 /// Logs constraint list.
 ///-------------------------------------------------------------
-void IKSolver::LogConstraintList(int frameNum)
+void IKSolver::LogConstraintList(int frameNum, bool append)
 {
-	std::ofstream logFile("logs/constraints.txt");
+	std::ios::openmode openMode = std::ios::out;
+	if (append)
+	{
+		openMode = std::ios::app;
+	}
+	std::ofstream logFile("logs/constraints.txt", openMode);
 
 	logFile << "Frame: " << frameNum << std::endl;
+	logFile << "Num Constraints: " << mConstraintList.size() << std::endl;
 	// loop and print data
 	for (int i = 0; i < mConstraintList.size(); i++)
 	{
@@ -239,10 +276,13 @@ void IKSolver::LogConstraintList(int frameNum)
 
 		// log data
 		logFile << "Constraint " << i << "\tId: " << constraint.GetConstraintId() 
+				<< "\tHandle Pos: " << constraint.GetHandleGlobalPos()
+				<< "\tConstraint Pos: " << constraint.GetConstraintPos(frameNum)
 				<< "\tValue: " << constraint.GetConstraintValue()
 				<< "\tSqrLen: " << constraint.GetConstraintSquareLength()
 				<< std::endl;
 	}
+	logFile << std::endl;
 
 	logFile.close();
 }
@@ -253,7 +293,33 @@ void IKSolver::LogConstraintList(int frameNum)
 ///-------------------------------------------------------------
 Vecd IKSolver::CalculateGradient(int frameNum)
 {
-	return vl_zero;
+	// setup initial gradient to be zero
+	// the dimensions should be equal to the number of DOFs we have
+	Vecd gradient;
+	gradient.SetSize(mModel->GetDofCount());
+	gradient.MakeZero();
+
+	// loop over all of our constraints, getting Jacobian and
+	// combining to form final value to add to total gradient
+	for (int i = 0; i < mConstraintList.size(); i++)
+	{
+		// get constraint
+		Constraint & constraint = mConstraintList[i];
+		Vec4d constraintVec(constraint.GetConstraintValue(), 1.0);
+
+		// get Jacobian - TODO
+		ConstraintJacobian jacobian(mModel, constraint);
+		Matd jacobianMatrix = jacobian.CalculateJacobian();		
+
+		// calculate current value and add to gradient
+		Vecd currentValue = jacobianMatrix * constraintVec;
+		gradient = gradient + currentValue;
+	}
+
+	// final computation of doubling after above calculation
+	gradient = 2.0 * gradient;
+
+	return gradient;
 }
 
 ///-------------------------------------------------------------
@@ -262,7 +328,19 @@ Vecd IKSolver::CalculateGradient(int frameNum)
 ///-------------------------------------------------------------
 double IKSolver::EvaluateObjectiveFunction(int frameNum)
 {
-	return 0.0;
+	double objectiveFunction = 0.0;
+
+	// loop over all constraints, adding to value
+	for (int i = 0; i < mConstraintList.size(); i++)
+	{
+		// get constraint
+		Constraint & constraint = mConstraintList[i];
+
+		// add sqrlen value to function value
+		objectiveFunction += constraint.GetConstraintSquareLength();
+	}
+
+	return objectiveFunction;
 }
 
 ///-------------------------------------------------------------

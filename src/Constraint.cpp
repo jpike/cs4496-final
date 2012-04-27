@@ -78,3 +78,37 @@ double Constraint::GetConstraintSquareLength()
 {
 	return mConstraintSquareLength;
 }
+
+///-------------------------------------------------------------
+/// Returns handle for this constraint.
+///-------------------------------------------------------------
+Marker * Constraint::GetHandle()
+{
+	// get all handles on model
+	MarkerList & modelHandles = mModel->mHandleList;
+
+	// get handle for this constraint
+	Marker * handle = modelHandles[mConstraintId];
+
+	return handle;
+}
+
+///-------------------------------------------------------------
+/// Returns global position for this constraint's handle.
+///-------------------------------------------------------------
+Vec3d Constraint::GetHandleGlobalPos()
+{
+	Marker * handle = GetHandle();
+
+	return handle->mGlobalPos;
+}
+
+///-------------------------------------------------------------
+/// Returns targer position for this constraint.
+///-------------------------------------------------------------
+Vec3d Constraint::GetConstraintPos(int frameNum)
+{
+	Vec3d constraintPos = mModel->mOpenedC3dFile->GetMarkerPos(frameNum, mConstraintId);
+
+	return constraintPos;
+}

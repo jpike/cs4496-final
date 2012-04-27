@@ -30,6 +30,11 @@ public:
 	Vec3d GetConstraintValue();
 	double GetConstraintSquareLength();
 
+	// other useful accessors
+	Marker * GetHandle();
+	Vec3d GetHandleGlobalPos();
+	Vec3d GetConstraintPos(int frameNum);
+
 protected:
 	// helper function
 	Vec3d EvaluateConstraint(Marker * handle, Vec3d & constraintPos);

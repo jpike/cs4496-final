@@ -44,7 +44,7 @@ protected:
 
 	// initialization helper functions
 	void CreateConstraints();
-	void LogConstraintList(int frameNum);
+	void LogConstraintList(int frameNum, bool append);
 
 	void CreateDofToHandleMap();
 	void LogDofToHandleMap();
