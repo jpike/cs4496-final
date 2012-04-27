@@ -38,12 +38,6 @@ ConstraintJacobian::~ConstraintJacobian()
 ///-------------------------------------------------------------
 Matd ConstraintJacobian::CalculateJacobian()
 {
-	// pre-calculate some values we need later during computation
-	// we need matrices within this handle's transform that occur
-	// before/after a transform with a given DOF
-	CalculatePreMatrices();
-	CalculatePostMatrices();
-
 	// create initial jacobian with zeroes
 	Matd jacobianMatrix;
 	jacobianMatrix.SetSize(mModel->GetDofCount(), 4);
@@ -53,7 +47,35 @@ Matd ConstraintJacobian::CalculateJacobian()
 	Marker * handle = mConstraint.GetHandle();
 	Vec4d localPos(handle->mOffset, 1.0);
 	TransformNode * node = mModel->mLimbs[handle->mNodeIndex];
+
+	// make identity child matrix (makes recursive calls simpler)
+	Mat4d childMatrix;
+	childMatrix.MakeDiag(1.0);
+	
+	// calculate entire jacobian
+	CalculateJacobian(jacobianMatrix, node, localPos, childMatrix);
+
+	return jacobianMatrix;
+}
+
+///-------------------------------------------------------------
+/// Calculates and fills Jacobian matrix for a given 
+/// transform node.
+///-------------------------------------------------------------
+void ConstraintJacobian::CalculateJacobian(Matd & jacobianMatrix, TransformNode * node, Vec4d & localPos, Mat4d & childTransform)
+{
+	// pre-calculate some values we need later during computation
+	// we need matrices within this node's transform that occur
+	// before/after a transform with a given DOF
+	CalculatePreMatrices(node);
+	CalculatePostMatrices(node);
+
+	// get data we need
 	Mat4d parentTransform = node->mParentTransform;
+
+	// set matrix for new child transform
+	Mat4d newChildTransform;
+	newChildTransform.MakeDiag(1.0);
 
 	// fill in matrix row, by row
 	// we do this (instead of column by column) as it is easier
@@ -83,14 +105,23 @@ Matd ConstraintJacobian::CalculateJacobian()
 				// and assign to appropriate row in Jacobian
 				Mat4d preMatrix = mPreMatrices[dofId];
 				Mat4d postMatrix = mPostMatrices[dofId];
-				Vec4d value = parentTransform * preMatrix * deriv * postMatrix * localPos;
+				Vec4d value = parentTransform * preMatrix * deriv * postMatrix * childTransform * localPos;
 
 				jacobianMatrix[dofId] = value;
 			}
 		}
+		// add this transform to appropriate new child transformation matrix
+		newChildTransform = newChildTransform * transform->GetTransform();
 	}
 
-	return jacobianMatrix;
+	// calculate jacobian values for parent's degrees of freedom if we have a parent
+	TransformNode * parent = node->mParentNode;
+	if (parent != NULL && parent != node)	// parent not NULL or current node
+	{
+		// calculate final new child transform - append current node's transformations to front of old child transform
+		newChildTransform = newChildTransform * childTransform;
+		CalculateJacobian(jacobianMatrix, parent, localPos, newChildTransform);
+	}
 }
 
 ///-------------------------------------------------------------
@@ -98,14 +129,12 @@ Matd ConstraintJacobian::CalculateJacobian()
 /// a transform matrix with a given DOF.
 /// TODO
 ///-------------------------------------------------------------
-void ConstraintJacobian::CalculatePreMatrices()
+void ConstraintJacobian::CalculatePreMatrices(TransformNode * node)
 {
 	// clear any old data
 	mPreMatrices.clear();
 
 	// get initial data we need
-	Marker * handle = mConstraint.GetHandle();
-	TransformNode * node = mModel->mLimbs[handle->mNodeIndex];
 	std::vector<Transform *> transforms = node->mTransforms;
 
 	// loop over all transforms in node, figuring out
@@ -140,14 +169,12 @@ void ConstraintJacobian::CalculatePreMatrices()
 /// a transform matrix with a given DOF.
 /// TODO
 ///-------------------------------------------------------------
-void ConstraintJacobian::CalculatePostMatrices()
+void ConstraintJacobian::CalculatePostMatrices(TransformNode * node)
 {
 	// clear any old data
 	mPostMatrices.clear();
 
 	// get initial data we need
-	Marker * handle = mConstraint.GetHandle();
-	TransformNode * node = mModel->mLimbs[handle->mNodeIndex];
 	std::vector<Transform *> transforms = node->mTransforms;
 
 	// loop over all transforms in node, figuring out

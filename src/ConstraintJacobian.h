@@ -12,6 +12,7 @@
 ///-------------------------------------------------------------
 #include <map>
 #include "Constraint.h"
+#include "TransformNode.h"
 
 ///-------------------------------------------------------------
 /// Typedefs
@@ -33,8 +34,9 @@ public:
 protected:
 
 	// helper methods
-	void CalculatePreMatrices();
-	void CalculatePostMatrices();
+	void CalculateJacobian(Matd & jacobianMatrix, TransformNode * node, Vec4d & localPos, Mat4d & childTransform);
+	void CalculatePreMatrices(TransformNode * node);
+	void CalculatePostMatrices(TransformNode * node);
 
 	// helper containers related to helper methods above
 	DofIdToMatrixMap mPreMatrices;

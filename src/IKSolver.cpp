@@ -152,6 +152,7 @@ void IKSolver::SolveLoop()
 	// limited by a max iteration parameter set for the solver
 	for (int frameCounter = 0; frameCounter < maxFrames; frameCounter++)
 	{
+		std::cout << "Starting frame " << frameCounter << std::endl;
 		// calculate constraint values
 		CalculateConstraints(frameCounter);
 		// evaluate objective function
@@ -159,7 +160,7 @@ void IKSolver::SolveLoop()
 
 		int iterations = 0;
 
-		while (objectiveFunction > mEpsilon && iterations < mMaxIterations)
+		while (objectiveFunction > mEpsilon )//&& iterations < mMaxIterations)
 		{
 			
 #ifdef _DEBUG
