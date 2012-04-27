@@ -10,7 +10,13 @@
 ///-------------------------------------------------------------
 /// Includes
 ///-------------------------------------------------------------
+#include <map>
 #include "Constraint.h"
+
+///-------------------------------------------------------------
+/// Typedefs
+///-------------------------------------------------------------
+typedef std::map<int, Mat4d> DofIdToMatrixMap;
 
 ///-------------------------------------------------------------
 /// @ConstraintJacobian
@@ -26,9 +32,17 @@ public:
 
 protected:
 
+	// helper methods
+	void CalculatePreMatrices();
+	void CalculatePostMatrices();
+
+	// helper containers related to helper methods above
+	DofIdToMatrixMap mPreMatrices;
+	DofIdToMatrixMap mPostMatrices;
+
+	// main jacobian parameters
 	Model * mModel;
 	Constraint & mConstraint;
-
 };
 
 #endif

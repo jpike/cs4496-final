@@ -15,6 +15,7 @@
 #include <vector>
 #include "Model.h"
 #include "Constraint.h"
+#include "ConstraintJacobian.h"
 
 ///-------------------------------------------------------------
 /// Typedefs
@@ -22,7 +23,6 @@
 typedef std::map<int, Marker *> DofIdToMarkerMap;
 typedef std::multimap<Marker *, int> MarkerToDofIdMap;
 typedef std::map<Marker *, Vec4d> MarkerToPosMap;
-typedef std::map<int, Mat4d> DofIdToMatrixMap;
 typedef std::map<int, Vec4d> DofIdToVectorMap;
 typedef std::vector<Constraint> ConstraintList;
 

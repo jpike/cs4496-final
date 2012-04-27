@@ -146,9 +146,9 @@ void Solution(void *v)
     cout << "TODO: Solve inverse kinematics problem" << endl;
     bool test = UI->mData->mSelectedModel->mLimbs[0]->mTransforms[0]->IsDof();
 
-	const double EPSILON = 0.01;
-	const double STEP_SIZE = 0.01;
-	const int NUM_ITERATIONS = 2;
+	const double EPSILON = 0.001;
+	const double STEP_SIZE = 0.5;
+	const int NUM_ITERATIONS = 3;
 
 	IKSolver solver(EPSILON, STEP_SIZE, NUM_ITERATIONS, UI->mData->mSelectedModel);
 	solver.Initialize();

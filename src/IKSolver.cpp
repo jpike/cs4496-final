@@ -15,7 +15,6 @@
 #include "TransformNode.h"
 #include "Transform.h"
 #include "C3dFileInfo.h"
-#include "ConstraintJacobian.h"
 
 ///-------------------------------------------------------------
 /// Constructor.
