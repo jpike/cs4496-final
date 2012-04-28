@@ -27,8 +27,14 @@ extern RealTimeIKUI *UI;
 /// Constructor.
 /// Sets parameters for solver.
 ///-------------------------------------------------------------
-IKSolver::IKSolver(double epsilon, double stepSize, int maxIterations, int maxFrames, Model * model)
-	: mEpsilon(epsilon), mStepSize(stepSize), mMaxIterations(maxIterations), mMaxNumFrames(maxFrames), mModel(model)
+IKSolver::IKSolver(double epsilon, double stepSize, int maxIterations, int maxFrames, int printFrequency, 
+					int stepIncreaseFrequency, double stepIncreaseFactor, double stepDecreaseFactor, 
+					int epsilonIncreaseFrequency, double epsilonIncreaseFactor, Model * model)
+	: mEpsilon(epsilon), mStepSize(stepSize), mMaxIterations(maxIterations), mMaxNumFrames(maxFrames), 
+		mPrintFrequency(printFrequency), mStepIncreaseFrequency(stepIncreaseFrequency), 
+		mStepIncreaseFactor(stepIncreaseFactor), mStepDecreaseFactor(stepDecreaseFactor), 
+		mEpsilonIncreaseFrequency(epsilonIncreaseFrequency), mEpsilonIncreaseFactor(epsilonIncreaseFactor),
+		mModel(model)
 {
 	
 }
@@ -67,9 +73,9 @@ void IKSolver::SolveLoop()
 #endif
 
 	// loop over all valid frames
-	// this is limited by the number of frames in the constraint file, but it is also
+	// this is limited by the number of frames in the constraint file, but it can also be
 	// limited by a max iteration parameter set for the solver
-	for (int frameCounter = 0; frameCounter < maxFrames && frameCounter < mMaxNumFrames; frameCounter++)
+	for (int frameCounter = 0; frameCounter < maxFrames /*&& frameCounter < mMaxNumFrames*/; frameCounter++)
 	{
 		std::cout << "Starting frame " << frameCounter << std::endl;
 		// calculate constraint values
@@ -78,21 +84,34 @@ void IKSolver::SolveLoop()
 		// evaluate objective function
 		double objectiveFunction = EvaluateObjectiveFunction(frameCounter);
 
+		// various variables for our main loop
 		double localStepSize = mStepSize;
 		double localEpsilon = mEpsilon;
+		
 		int iterations = 0;
-
 		int decreaseStepCounter = 0;
 
+		// main solving loop
 		while (objectiveFunction > localEpsilon )//&& iterations < mMaxIterations)
 		{
-			std::cout << "Iteration " << iterations << "\tObjective Function: " << objectiveFunction 
-						<< "\tStep Size: " << localStepSize << std::endl;
+#ifdef _DEBUG
+			// print out some information every 30 frames
+			if (iterations % mPrintFrequency == 0)
+			{
+				std::cout << "Iteration " << iterations << "\tObjective: " << objectiveFunction 
+							<< "\tStep: " << localStepSize << "\tEpsilon: " << localEpsilon << std::endl;
+			}
+#endif
 			
 #ifdef _DEBUG
-			logFile << "Frame: " << frameCounter << std::endl;
-			logFile << "Iteration: " << iterations << std::endl;
-			logFile << "Objective Function: " << objectiveFunction << std::endl;
+			if (iterations % mPrintFrequency == 0)
+			{
+				logFile << "Frame: " << frameCounter << std::endl;
+				logFile << "Iteration: " << iterations << std::endl;
+				logFile << "Step Size: " << localStepSize << std::endl;
+				logFile << "Epsilon: " << localEpsilon << std::endl;
+				logFile << "Objective Function: " << objectiveFunction << std::endl;
+			}
 #endif
 
 			// calculate gradient
@@ -110,10 +129,13 @@ void IKSolver::SolveLoop()
 			mModel->SetDofs(newDofs);
 
 #ifdef _DEBUG
-			logFile << "Gradient: " << gradient << std::endl;
-			logFile << "Old Dofs: " << oldDofs << std::endl;
-			logFile << "New Dofs: " << newDofs << std::endl;
-			logFile << std::endl;
+			if (iterations % mPrintFrequency == 0)
+			{
+				logFile << "Gradient: " << gradient << std::endl;
+				logFile << "Old Dofs: " << oldDofs << std::endl;
+				logFile << "New Dofs: " << newDofs << std::endl;
+				logFile << std::endl;
+			}
 #endif
 
 			// calculate new constraint values
@@ -127,42 +149,52 @@ void IKSolver::SolveLoop()
 				// if difference between objective functions is greater than epsilon
 				// and certain number of iterations have passed, increase step size
 				if (newObjectiveFunction > mEpsilon &&
-					iterations > 0 && iterations % 20 == 0)
+					iterations > 0 && iterations % mStepIncreaseFrequency == 0)
 				{
-					localStepSize *= 4.0;
+					localStepSize *= mStepIncreaseFactor;
+#ifdef _DEBUG
+					std::cout << "Increased step size to " << localStepSize << std::endl;
+#endif
 				}
 
 				objectiveFunction = newObjectiveFunction;
 			}
 			else
 			{
+				// count how many times we've decrease step this frame
+				decreaseStepCounter++;
+
+				// decrease step size
+				localStepSize /= mStepDecreaseFactor;
 #ifdef _DEBUG
-				logFile << "OBJECTIVE FUNCTION INCREASED!\t" << newObjectiveFunction << std::endl;
+				std::cout << "Decreased step size to " << localStepSize << std::endl;
 #endif
 				
-				// half step size
-				decreaseStepCounter++;
-				localStepSize /= 2.0;
-				
-				//localEpsilon *= 2.0;
-				std::cout << "OBJECTIVE FUNCTION INCREASED!\t" << newObjectiveFunction << "\tEpsilon " << localEpsilon << std::endl;
-				//if (decreaseStepCounter > 10)	// if we reach this pont, just go ahead and stop
-				//{
-					//objectiveFunction = 0.0;
-				//}
-				//else
-				//{
-					if (decreaseStepCounter < 300)
-					{
-						// reset to old dofs
-						mModel->SetDofs(oldDofs);
-					}
-					else
-					{
-						// at this point, give up; it isn't worth it
-						objectiveFunction = 0.0;
-					}
-				//}
+				// based on how many times we've had to decrease the step, choose different options
+				if (decreaseStepCounter < mMaxIterations)
+				{
+					// reset to old dofs and try again
+					mModel->SetDofs(oldDofs);
+				}
+				else if (decreaseStepCounter < mEpsilonIncreaseFrequency*mMaxIterations)
+				{
+					// try increasing epsilon
+					localEpsilon *= mEpsilonIncreaseFactor;
+#ifdef _DEBUG
+					std::cout << "Increased epsilon to " << localEpsilon << std::endl;
+#endif
+
+					// reset to old dofs and try again
+					mModel->SetDofs(oldDofs);
+				}
+				else
+				{
+					// at this point, give up; it isn't worth it
+					objectiveFunction = 0.0;
+#ifdef _DEBUG
+					std::cout << "Too many iterations; moving on..." << std::endl;
+#endif
+				}
 			}
 
 			// update iteration counter
@@ -170,7 +202,11 @@ void IKSolver::SolveLoop()
 		}
 
 		UI->mGLWindow->flush();	// update screen
-		std::cout << "Ending frame " << frameCounter << std::endl;
+		std::cout << "Ending frame " << frameCounter;
+#ifdef _DEBUG
+		std::cout << " after " << iterations << " iterations";
+#endif
+		std::cout << std::endl;
 
 	}
 
@@ -220,10 +256,8 @@ void IKSolver::CreateConstraints(int frameNum)
 		}
 	}
 
-	std::cout << mConstraintList.size() << std::endl;
-
 #ifdef _DEBUG
-	LogConstraintList(0, false);
+	//LogConstraintList(0, false);
 #endif
 }
 
@@ -240,7 +274,7 @@ void IKSolver::CalculateConstraints(int frameNum)
 	}
 
 #ifdef _DEBUG
-	LogConstraintList(frameNum, true);
+	//LogConstraintList(frameNum, true);
 #endif
 }
 
@@ -249,8 +283,6 @@ void IKSolver::CalculateConstraints(int frameNum)
 ///-------------------------------------------------------------
 void IKSolver::LogConstraintList(int frameNum, bool append)
 {
-	if (frameNum > 10 && frameNum < 47) return;
-
 	std::ios::openmode openMode = std::ios::out;
 	if (append)
 	{
@@ -281,7 +313,6 @@ void IKSolver::LogConstraintList(int frameNum, bool append)
 
 ///-------------------------------------------------------------
 /// Calculates gradient for a given frame.
-/// TODO
 ///-------------------------------------------------------------
 Vecd IKSolver::CalculateGradient(int frameNum)
 {
@@ -316,7 +347,6 @@ Vecd IKSolver::CalculateGradient(int frameNum)
 
 ///-------------------------------------------------------------
 /// Evaluates objective function for a given frame.
-/// TODO
 ///-------------------------------------------------------------
 double IKSolver::EvaluateObjectiveFunction(int frameNum)
 {

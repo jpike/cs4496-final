@@ -34,7 +34,9 @@ typedef std::vector<Constraint> ConstraintList;
 class IKSolver
 {
 public:
-	IKSolver(double epsilon, double stepSize, int maxIterations, int maxFrames, Model * model);
+	IKSolver(double epsilon, double stepSize, int maxIterations, int maxFrames, int printFrequency, 
+			int stepIncreaseFrequency, double stepIncreaseFactor, double stepDecreaseFactor, 
+			int epsilonIncreaseFrequency, double epsilonIncreaseFactor, Model * model);
 	~IKSolver();
 
 	void Initialize();
@@ -56,6 +58,12 @@ protected:
 	double mStepSize;
 	int mMaxIterations;
 	int mMaxNumFrames;
+	int mPrintFrequency;
+	int mStepIncreaseFrequency;
+	double mStepIncreaseFactor;
+	double mStepDecreaseFactor;
+	int mEpsilonIncreaseFrequency;
+	double mEpsilonIncreaseFactor;
 	Model * mModel;
 
 	// data needed for computation

@@ -77,6 +77,12 @@ void Solution(void *v)
 	// setup some initial parameters for out solver
 	const int NUM_ITERATIONS = 300;
 	const int NUM_FRAMES = 50;
+	const int PRINT_FREQUENCY = 30;//30;
+	const int STEP_INCREASE_FREQUENCY = 20;
+	const double STEP_INCREASE_FACTOR = 4.0;
+	const double STEP_DECREASE_FACTOR = 2.0;
+	const int EPSILON_INCREASE_FREQUENCY = 2;
+	const double EPSILON_INCREASE_FACTOR = 2.0;
 	double epsilon = 0.1;
 	double stepSize = 0.01;
 
@@ -88,7 +94,9 @@ void Solution(void *v)
 	}
 
 	// setup solver
-	IKSolver solver(epsilon, stepSize, NUM_ITERATIONS, NUM_FRAMES, UI->mData->mSelectedModel);
+	IKSolver solver(epsilon, stepSize, NUM_ITERATIONS, NUM_FRAMES, PRINT_FREQUENCY, STEP_INCREASE_FREQUENCY,
+					STEP_INCREASE_FACTOR, STEP_DECREASE_FACTOR, 
+					EPSILON_INCREASE_FREQUENCY, EPSILON_INCREASE_FACTOR, UI->mData->mSelectedModel);
 	solver.Initialize();
 
 	// run solver
