@@ -46,26 +46,10 @@ protected:
 	void CreateConstraints(int frameNum);
 	void LogConstraintList(int frameNum, bool append);
 
-	void CreateDofToHandleMap();
-	void LogDofToHandleMap();
-	
-
 	// loop-solving helper functions
 	void CalculateConstraints(int frameNum);
 	double EvaluateObjectiveFunction(int frameNum);
 	Vecd CalculateGradient(int frameNum);
-
-	void CreateConstraintMap(int frameNum);
-	void LogConstraintMap();
-	Vec3d EvaluateConstraint(Marker * handle, Vec3d & constraintPos);
-	void CreateConstraintMatrix();
-	void LogConstraintMatrix();
-	void CreatePreMatrices();
-	void LogPreMatrices();
-	void CreatePostMatrices();
-	void LogPostMatrices();
-	void CreateDerivatives();
-	void LogDerivatives();
 
 	// parameters for an individual "solving"
 	double mEpsilon;
@@ -77,16 +61,6 @@ protected:
 	// data needed for computation
 	ConstraintList mConstraintList;
 
-	// maps for easier access to certain data
-	DofIdToMarkerMap mDofToHandleMap;
-	MarkerToDofIdMap mHandleToDofMap;
-	MarkerToPosMap mHandleToConstraintMap;
-	DofIdToMatrixMap mDofToPreMatrixMap;
-	DofIdToVectorMap mDofToPostMatrixMap;
-	DofIdToMatrixMap mDofToDerivativeMap;
-
-	// math versions of data used in computation
-	Matd mConstraintMatrix;
 };
 
 #endif

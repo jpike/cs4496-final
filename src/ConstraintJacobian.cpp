@@ -127,7 +127,6 @@ void ConstraintJacobian::CalculateJacobian(Matd & jacobianMatrix, TransformNode 
 ///-------------------------------------------------------------
 /// Calculates matrix that occurs before (left-side)
 /// a transform matrix with a given DOF.
-/// TODO
 ///-------------------------------------------------------------
 void ConstraintJacobian::CalculatePreMatrices(TransformNode * node)
 {
@@ -167,7 +166,6 @@ void ConstraintJacobian::CalculatePreMatrices(TransformNode * node)
 ///-------------------------------------------------------------
 /// Calculates matrix that occurs after (right-side)
 /// a transform matrix with a given DOF.
-/// TODO
 ///-------------------------------------------------------------
 void ConstraintJacobian::CalculatePostMatrices(TransformNode * node)
 {
