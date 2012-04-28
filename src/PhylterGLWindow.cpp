@@ -137,6 +137,15 @@ void Phylter_Fl_Gl_Window::draw()
   Origin o;
   o.Draw();
   
+  // set dofs for playback
+  int frameNum = UI->mFrameCounter_cou->value();
+  if (UI->mFrameToDofMap.count(frameNum) > 0)
+  {
+	  // if we have dofs for current frame, set them on selected model
+	  Vecd & dofs = UI->mFrameToDofMap[frameNum];
+	  UI->mData->mSelectedModel->SetDofs(dofs);
+  }
+
   if(mShowViz){
     for(int i = 0; i < UI->mData->mModels.size(); i++)
       UI->mData->mModels[i]->DrawVisualization();

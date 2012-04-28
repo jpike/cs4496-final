@@ -74,6 +74,8 @@ void Solution(void *v)
     //cout << "TODO: Solve inverse kinematics problem" << endl;
     //bool test = UI->mData->mSelectedModel->mLimbs[0]->mTransforms[0]->IsDof();
 
+	std::cout << UI->mFrameCounter_cou->value() << std::endl;
+
 	// setup some initial parameters for out solver
 	const int NUM_ITERATIONS = 300;
 	const int NUM_FRAMES = 50;

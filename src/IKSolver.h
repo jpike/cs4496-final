@@ -53,6 +53,9 @@ protected:
 	double EvaluateObjectiveFunction(int frameNum);
 	Vecd CalculateGradient(int frameNum);
 
+	// save dofs for later playback
+	void SaveDofs(int frameNum);
+
 	// parameters for an individual "solving"
 	double mEpsilon;
 	double mStepSize;

@@ -5,6 +5,8 @@
 #include <FL/Fl.H>
 #include <vector>
 #include <fstream>
+#include <map>
+#include <vl/VLd.h>
 class Phylter_Fl_Gl_Window;
 class PhowardData;
 #include "UICallback.h"
@@ -17,6 +19,11 @@ class PhowardData;
 #include <FL/Fl_Roller.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Scroll.H>
+
+///-------------------------------------------------------------
+/// Typedefs
+///-------------------------------------------------------------
+typedef std::map<int, Vecd> FrameToDofMap;
 
 class RealTimeIKUI {
 public:
@@ -103,5 +110,7 @@ public:
   void DeleteSliderWindow();
   void Increment();
   PhowardData *mData;
+
+  FrameToDofMap mFrameToDofMap;
 };
 #endif

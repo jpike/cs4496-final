@@ -64,12 +64,17 @@ void IKSolver::Initialize()
 ///-------------------------------------------------------------
 void IKSolver::SolveLoop()
 {
+	// clear saved frame data
+	UI->mFrameToDofMap.clear();
+
 	int maxFrames = mModel->mOpenedC3dFile->GetFrameCount();
 
 #ifdef _DEBUG
 	std::ofstream logFile("logs/loop_log.txt");
 
 	logFile << "Num Frames: " << maxFrames << std::endl << std::endl;
+
+	//std::ofstream dofFile("logs/dofs.txt");
 #endif
 
 	// loop over all valid frames
@@ -201,7 +206,22 @@ void IKSolver::SolveLoop()
 			iterations++;
 		}
 
+		UI->mFrameCounter_cou->value(frameCounter);	// update frame counter
+
+		SaveDofs(frameCounter);	// save dofs for later playback
+#ifdef _DEBUG
+		// commented out because it slows things down more than really necessary
+		// and same info can be placed into main log file
+		// write dofs to file
+		//Vecd dofs;
+		//dofs.SetSize(mModel->GetDofCount());
+		//mModel->mDofList.GetDofs(&dofs);
+
+		//dofFile << frameCounter << std::endl << dofs << std::endl << std::endl;
+#endif
+
 		UI->mGLWindow->flush();	// update screen
+
 		std::cout << "Ending frame " << frameCounter;
 #ifdef _DEBUG
 		std::cout << " after " << iterations << " iterations";
@@ -211,6 +231,8 @@ void IKSolver::SolveLoop()
 	}
 
 #ifdef _DEBUG
+	//dofFile.close();
+
 	logFile.close();
 #endif
 }
@@ -365,3 +387,16 @@ double IKSolver::EvaluateObjectiveFunction(int frameNum)
 	return objectiveFunction;
 }
 
+///-------------------------------------------------------------
+/// Saves dofs for later playback
+///-------------------------------------------------------------
+void IKSolver::SaveDofs(int frameNum)
+{
+	// get dofs
+	int dofCount = mModel->GetDofCount();
+	Vecd dofs;
+	dofs.SetSize(dofCount);
+	mModel->mDofList.GetDofs(&dofs);
+
+	UI->mFrameToDofMap[frameNum] = dofs;
+}
