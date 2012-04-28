@@ -146,11 +146,20 @@ void Solution(void *v)
     cout << "TODO: Solve inverse kinematics problem" << endl;
     bool test = UI->mData->mSelectedModel->mLimbs[0]->mTransforms[0]->IsDof();
 
-	const double EPSILON = 0.0001;
-	const double STEP_SIZE = 1.0;
-	const int NUM_ITERATIONS = 3;
+	const int NUM_ITERATIONS = 2;
+	const int NUM_FRAMES = 50;
 
-	IKSolver solver(EPSILON, STEP_SIZE, NUM_ITERATIONS, UI->mData->mSelectedModel);
+	double epsilon = 0.1;
+	double stepSize = 0.01;
+
+	// use different parameters if smaller number of handles
+	if (UI->mData->mSelectedModel->GetHandleCount() < 10)
+	{
+		epsilon = 0.0001;
+		stepSize = 0.5;
+	}
+
+	IKSolver solver(epsilon, stepSize, NUM_ITERATIONS, NUM_FRAMES, UI->mData->mSelectedModel);
 	solver.Initialize();
 
 	solver.SolveLoop();

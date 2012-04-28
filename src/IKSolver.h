@@ -34,7 +34,7 @@ typedef std::vector<Constraint> ConstraintList;
 class IKSolver
 {
 public:
-	IKSolver(double epsilon, double stepSize, int maxIterations, Model * model);
+	IKSolver(double epsilon, double stepSize, int maxIterations, int maxFrames, Model * model);
 	~IKSolver();
 
 	void Initialize();
@@ -43,7 +43,7 @@ public:
 protected:
 
 	// initialization helper functions
-	void CreateConstraints();
+	void CreateConstraints(int frameNum);
 	void LogConstraintList(int frameNum, bool append);
 
 	void CreateDofToHandleMap();
@@ -71,6 +71,7 @@ protected:
 	double mEpsilon;
 	double mStepSize;
 	int mMaxIterations;
+	int mMaxNumFrames;
 	Model * mModel;
 
 	// data needed for computation

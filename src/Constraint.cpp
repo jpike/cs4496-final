@@ -48,6 +48,12 @@ void Constraint::EvaluateConstraint(int frameNum)
 	// calculate values
 	mConstraintValue = EvaluateConstraint(handle, constraintPos);
 	mConstraintSquareLength = sqrlen(mConstraintValue);
+
+	/*if (constraintPos == vl_zero)
+	{
+		mConstraintValue.MakeZero();
+		mConstraintSquareLength = 0;
+	}*/
 }
 
 ///-------------------------------------------------------------

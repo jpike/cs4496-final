@@ -15,13 +15,20 @@
 #include "TransformNode.h"
 #include "Transform.h"
 #include "C3dFileInfo.h"
+#include "RealTimeIKui.h"
+#include "PhylterGLWindow.h"
+
+///-------------------------------------------------------------
+/// Externs
+///-------------------------------------------------------------
+extern RealTimeIKUI *UI;
 
 ///-------------------------------------------------------------
 /// Constructor.
 /// Sets parameters for solver.
 ///-------------------------------------------------------------
-IKSolver::IKSolver(double epsilon, double stepSize, int maxIterations, Model * model)
-	: mEpsilon(epsilon), mStepSize(stepSize), mMaxIterations(maxIterations), mModel(model)
+IKSolver::IKSolver(double epsilon, double stepSize, int maxIterations, int maxFrames, Model * model)
+	: mEpsilon(epsilon), mStepSize(stepSize), mMaxIterations(maxIterations), mMaxNumFrames(maxFrames), mModel(model)
 {
 	
 }
@@ -42,7 +49,7 @@ IKSolver::~IKSolver()
 ///-------------------------------------------------------------
 void IKSolver::Initialize()
 {
-	CreateConstraints();
+	
 }
 
 ///-------------------------------------------------------------
@@ -150,18 +157,25 @@ void IKSolver::SolveLoop()
 	// loop over all valid frames
 	// this is limited by the number of frames in the constraint file, but it is also
 	// limited by a max iteration parameter set for the solver
-	for (int frameCounter = 0; frameCounter < maxFrames; frameCounter++)
+	for (int frameCounter = 0; frameCounter < maxFrames && frameCounter < mMaxNumFrames; frameCounter++)
 	{
 		std::cout << "Starting frame " << frameCounter << std::endl;
 		// calculate constraint values
+		CreateConstraints(frameCounter);
 		CalculateConstraints(frameCounter);
 		// evaluate objective function
 		double objectiveFunction = EvaluateObjectiveFunction(frameCounter);
 
+		double localStepSize = mStepSize;
+		double localEpsilon = mEpsilon;
 		int iterations = 0;
 
-		while (objectiveFunction > mEpsilon )//&& iterations < mMaxIterations)
+		int decreaseStepCounter = 0;
+
+		while (objectiveFunction > localEpsilon )//&& iterations < mMaxIterations)
 		{
+			std::cout << "Iteration " << iterations << "\tObjective Function: " << objectiveFunction 
+						<< "\tStep Size: " << localStepSize << std::endl;
 			
 #ifdef _DEBUG
 			logFile << "Frame: " << frameCounter << std::endl;
@@ -178,7 +192,7 @@ void IKSolver::SolveLoop()
 			mModel->mDofList.GetDofs(&oldDofs);
 
 			// move dofs
-			Vecd newDofs = oldDofs - mStepSize * gradient;
+			Vecd newDofs = oldDofs - localStepSize * gradient;
 
 			// update dofs
 			mModel->SetDofs(newDofs);
@@ -193,11 +207,58 @@ void IKSolver::SolveLoop()
 			// calculate new constraint values
 			CalculateConstraints(frameCounter);
 			// calculate new objective function value
-			objectiveFunction = EvaluateObjectiveFunction(frameCounter);
+			double newObjectiveFunction = EvaluateObjectiveFunction(frameCounter);
+			// make sure we always decrease so that we don't get stuck in some infinite loop
+			if (newObjectiveFunction < objectiveFunction)
+			{
+				// adaptive step size
+				// if difference between objective functions is greater than epsilon
+				// and certain number of iterations have passed, increase step size
+				if (newObjectiveFunction > mEpsilon &&
+					iterations > 0 && iterations % 20 == 0)
+				{
+					localStepSize *= 4.0;
+				}
+
+				objectiveFunction = newObjectiveFunction;
+			}
+			else
+			{
+#ifdef _DEBUG
+				logFile << "OBJECTIVE FUNCTION INCREASED!\t" << newObjectiveFunction << std::endl;
+#endif
+				
+				// half step size
+				decreaseStepCounter++;
+				localStepSize /= 2.0;
+				
+				//localEpsilon *= 2.0;
+				std::cout << "OBJECTIVE FUNCTION INCREASED!\t" << newObjectiveFunction << "\tEpsilon " << localEpsilon << std::endl;
+				//if (decreaseStepCounter > 10)	// if we reach this pont, just go ahead and stop
+				//{
+					//objectiveFunction = 0.0;
+				//}
+				//else
+				//{
+					if (decreaseStepCounter < 300)
+					{
+						// reset to old dofs
+						mModel->SetDofs(oldDofs);
+					}
+					else
+					{
+						// at this point, give up; it isn't worth it
+						objectiveFunction = 0.0;
+					}
+				//}
+			}
 
 			// update iteration counter
 			iterations++;
 		}
+
+		UI->mGLWindow->flush();	// update screen
+		std::cout << "Ending frame " << frameCounter << std::endl;
 
 	}
 
@@ -209,7 +270,7 @@ void IKSolver::SolveLoop()
 ///-------------------------------------------------------------
 /// Creates initial list of constraints.
 ///-------------------------------------------------------------
-void IKSolver::CreateConstraints()
+void IKSolver::CreateConstraints(int frameNum)
 {
 	// clear any old data that might exist
 	mConstraintList.clear();
@@ -217,27 +278,44 @@ void IKSolver::CreateConstraints()
 	// get all handles on model
 	MarkerList & modelHandles = mModel->mHandleList;
 
+	Vec3d zeroVec(0, 0, 0);
+	zeroVec.MakeZero();
+
 	// loop over all handles on model, evaluating constraint
 	for (int i = 0; i < modelHandles.size(); i++)
 	{
 		// get handle on model and contraint position
 		Marker * handle = modelHandles[i];
-		Vec3d & constraintPos = mModel->mOpenedC3dFile->GetMarkerPos(0, i);
+		Vec3d & constraintPos = mModel->mOpenedC3dFile->GetMarkerPos(frameNum, i);
 
 		// if constraint is 0, 0, 0, then we don't have a constraint to actually deal with,
 		// so only create and add constraint if this is not the case
-		if (constraintPos != vl_zero)
+		// all of these checks are in place to absolutely make sure, because somehow some of
+		// these constraints snuck through
+		if (constraintPos != vl_zero && constraintPos != vl_0)
 		{
-			mConstraintList.push_back(Constraint(mModel, i));
+			if (len(constraintPos) != 0)
+			{
+				if ( !(constraintPos[0] == 0 && constraintPos[1] == 0 && constraintPos[2] == 0) )
+				{
+					if (zeroVec != constraintPos)
+					{
+						mConstraintList.push_back(Constraint(mModel, i));
+					}
+				}
+			}
+
 		}
 	}
+
+	std::cout << mConstraintList.size() << std::endl;
 
 #ifdef _DEBUG
 	LogConstraintList(0, false);
 #endif
 }
 
-///-------------------------------------------------------------
+///---------------------------------r----------------------------
 /// Calculates constraints for a given frame.
 ///-------------------------------------------------------------
 void IKSolver::CalculateConstraints(int frameNum)
@@ -259,6 +337,8 @@ void IKSolver::CalculateConstraints(int frameNum)
 ///-------------------------------------------------------------
 void IKSolver::LogConstraintList(int frameNum, bool append)
 {
+	if (frameNum > 10 && frameNum < 47) return;
+
 	std::ios::openmode openMode = std::ios::out;
 	if (append)
 	{
