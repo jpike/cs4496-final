@@ -57,10 +57,10 @@ TMat4 &TMat4::operator *= (const TMat4 &m)
 	// for C := A * B, each row of C is basically the weighted sum of rows in B
 	// with weights from the same row in A
 	// load up matrix B:
-	const __m128d m0a = _mm_load_pd(&m[0][0]), m0b = _mm_load_pd(&m[0][2]);
-	const __m128d m1a = _mm_load_pd(&m[1][0]), m1b = _mm_load_pd(&m[1][2]);
-	const __m128d m2a = _mm_load_pd(&m[2][0]), m2b = _mm_load_pd(&m[2][2]);
-	const __m128d m3a = _mm_load_pd(&m[3][0]), m3b = _mm_load_pd(&m[3][2]);
+	const __m128d m0a = _mm_loadu_pd(&m[0][0]), m0b = _mm_loadu_pd(&m[0][2]);
+	const __m128d m1a = _mm_loadu_pd(&m[1][0]), m1b = _mm_loadu_pd(&m[1][2]);
+	const __m128d m2a = _mm_loadu_pd(&m[2][0]), m2b = _mm_loadu_pd(&m[2][2]);
+	const __m128d m3a = _mm_loadu_pd(&m[3][0]), m3b = _mm_loadu_pd(&m[3][2]);
 
 	// loop through the rows in A and C
 	for (size_t i = 0; i < 4; i++) {
@@ -91,8 +91,8 @@ TMat4 &TMat4::operator *= (const TMat4 &m)
 		const __m128d left  = _mm_add_pd(upperLeft, lowerLeft);
 		const __m128d right = _mm_add_pd(upperRight, lowerRight);
 
-		_mm_store_pd(&row[i][0], left);
-		_mm_store_pd(&row[i][2], right);
+		_mm_storeu_pd(&row[i][0], left);
+		_mm_storeu_pd(&row[i][2], right);
 	}
 
 #else
@@ -182,10 +182,10 @@ TMat4 TMat4::operator * (const TMat4 &m) const
 	// for C := A * B, each row of C is basically the weighted sum of rows in B
 	// with weights from the same row in A
 	// load up matrix B:
-	const __m128d m0a = _mm_load_pd(&m[0][0]), m0b = _mm_load_pd(&m[0][2]);
-	const __m128d m1a = _mm_load_pd(&m[1][0]), m1b = _mm_load_pd(&m[1][2]);
-	const __m128d m2a = _mm_load_pd(&m[2][0]), m2b = _mm_load_pd(&m[2][2]);
-	const __m128d m3a = _mm_load_pd(&m[3][0]), m3b = _mm_load_pd(&m[3][2]);
+	const __m128d m0a = _mm_loadu_pd(&m[0][0]), m0b = _mm_loadu_pd(&m[0][2]);
+	const __m128d m1a = _mm_loadu_pd(&m[1][0]), m1b = _mm_loadu_pd(&m[1][2]);
+	const __m128d m2a = _mm_loadu_pd(&m[2][0]), m2b = _mm_loadu_pd(&m[2][2]);
+	const __m128d m3a = _mm_loadu_pd(&m[3][0]), m3b = _mm_loadu_pd(&m[3][2]);
 
 	// loop through the rows in A and C
 	for (size_t i = 0; i < 4; i++) {
@@ -216,8 +216,8 @@ TMat4 TMat4::operator * (const TMat4 &m) const
 		const __m128d left  = _mm_add_pd(upperLeft, lowerLeft);
 		const __m128d right = _mm_add_pd(upperRight, lowerRight);
 
-		_mm_store_pd(&result[i][0], left);
-		_mm_store_pd(&result[i][2], right);
+		_mm_storeu_pd(&result[i][0], left);
+		_mm_storeu_pd(&result[i][2], right);
 	}
 
 #else
@@ -390,14 +390,14 @@ Void TMat4::MakeDiag(TMReal k)
 	const __m128d zeroOne = _mm_set_pd(k, 0.0);
 	const __m128d zeroes = _mm_set_pd(0.0, 0.0);
 
-	_mm_store_pd(&row[0][0], oneZero);
-	_mm_store_pd(&row[0][2], zeroes);
-	_mm_store_pd(&row[1][0], zeroOne);
-	_mm_store_pd(&row[1][2], zeroes);
-	_mm_store_pd(&row[2][0], zeroes);
-	_mm_store_pd(&row[2][2], oneZero);
-	_mm_store_pd(&row[3][0], zeroes);
-	_mm_store_pd(&row[3][2], zeroOne);
+	_mm_storeu_pd(&row[0][0], oneZero);
+	_mm_storeu_pd(&row[0][2], zeroes);
+	_mm_storeu_pd(&row[1][0], zeroOne);
+	_mm_storeu_pd(&row[1][2], zeroes);
+	_mm_storeu_pd(&row[2][0], zeroes);
+	_mm_storeu_pd(&row[2][2], oneZero);
+	_mm_storeu_pd(&row[3][0], zeroes);
+	_mm_storeu_pd(&row[3][2], zeroOne);
 
 #else
 

@@ -10,8 +10,8 @@ was provided by the professor and can be downloaded here:
 
 Build
 -----
-Visual Studio 2010 project and solution files are included. Note that it is
-configured for x64, and the binary libraries for vl and fltk are also x64.
+Visual Studio 2010 project and solution files are included. Note that it should
+be configured for x64, and the binary libraries for vl and fltk are also x64.
 
 
 vl
