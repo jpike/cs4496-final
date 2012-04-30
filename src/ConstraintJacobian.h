@@ -10,14 +10,14 @@
 ///-------------------------------------------------------------
 /// Includes
 ///-------------------------------------------------------------
-#include <map>
+#include <hash_map>
 #include "Constraint.h"
 #include "TransformNode.h"
 
 ///-------------------------------------------------------------
 /// Typedefs
 ///-------------------------------------------------------------
-typedef std::map<int, Mat4d> DofIdToMatrixMap;
+typedef std::hash_map<int, Mat4d> DofIdToMatrixMap;
 
 ///-------------------------------------------------------------
 /// @ConstraintJacobian
