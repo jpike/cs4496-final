@@ -10,8 +10,8 @@ class PhowardData
 {
  public:
   PhowardData(){
-    mFPS = 30.0;
-    mHowFast = 0.03;
+    mFPS = 60.0;
+    mHowFast = 1.0 / 60.0;
     mSelectedModel = NULL;
   };
   ~PhowardData(){};

@@ -111,7 +111,7 @@ void ConstraintJacobian::CalculateJacobian(Matd & jacobianMatrix, TransformNode 
 			}
 		}
 		// add this transform to appropriate new child transformation matrix
-		newChildTransform = newChildTransform * transform->GetTransform();
+		newChildTransform *= transform->GetTransform();
 	}
 
 	// calculate jacobian values for parent's degrees of freedom if we have a parent
@@ -119,7 +119,7 @@ void ConstraintJacobian::CalculateJacobian(Matd & jacobianMatrix, TransformNode 
 	if (parent != NULL && parent != node)	// parent not NULL or current node
 	{
 		// calculate final new child transform - append current node's transformations to front of old child transform
-		newChildTransform = newChildTransform * childTransform;
+		newChildTransform *= childTransform;
 		CalculateJacobian(jacobianMatrix, parent, localPos, newChildTransform);
 	}
 }
@@ -159,7 +159,7 @@ void ConstraintJacobian::CalculatePreMatrices(TransformNode * node)
 		}
 		// now that we've gone through this transform, 
 		// update the preMatrix to have current transform for later transforms
-		preMatrix = preMatrix * transform->GetTransform();
+		preMatrix *= transform->GetTransform();
 	}
 }
 
