@@ -1,0 +1,15 @@
+
+x64/
+Release/
+Debug/
+
+*.exe
+*.obj
+*.tlog
+*.pdb
+
+*.opensdf
+*.sdf
+*.suo
+*.vc*proj.user
+*.vc*proj.filters
