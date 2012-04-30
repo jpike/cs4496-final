@@ -41,7 +41,7 @@ void LoadModel(void *v)
 {
   char *params = (char*)v;
   if(!params){
-    params = (char*)fl_file_chooser("Open File?", "{*.skel}", "../src/skels" );
+    params = (char*)fl_file_chooser("Open File?", "{*.skel}", "src/skels" );
   }
 
   if(!params)
@@ -118,7 +118,7 @@ void LoadC3d(void *v)
   }
   char *params = (char*)v;
   if(!params){
-    params = fl_file_chooser("Open File?", "{*.c3d}", "mocap/" );
+    params = fl_file_chooser("Open File?", "{*.c3d}", "src/mocap" );
   }
 
   if(!params)
